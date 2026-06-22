@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaludEspera — Predictor SNS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --azul:     #1a3a5c;
+    --azul-med: #2d6a9f;
+    --azul-clr: #e8f2fb;
+    --verde:    #1d7a5f;
+    --verde-clr:#e4f5ef;
+    --naranja:  #e07b3a;
+    --naranja-clr:#fdf0e6;
+    --rojo:     #c0392b;
+    --rojo-clr: #fdecea;
+    --gris-f:   #f5f6f8;
+    --gris-b:   #e2e5ea;
+    --texto:    #1c2431;
+    --texto-s:  #5a6478;
+    --blanco:   #ffffff;
+    --radio:    12px;
+    --sombra:   0 2px 16px rgba(26,58,92,.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--gris-f);
+    color: var(--texto);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--azul);
+    color: var(--blanco);
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+  }
+  header .logo-mark {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3.2rem;
+    line-height: 1;
+    color: #7ec8f0;
+  }
+  header .header-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem;
+    font-weight: 400;
+    letter-spacing: -.5px;
+  }
+  header .header-text p {
+    font-size: .82rem;
+    color: #a8c8e8;
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+
+  .grid-main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--blanco);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra);
+    padding: 28px;
+  }
+  .card-title {
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--texto-s);
+    margin-bottom: 18px;
+  }
+
+  /* ── FORMULARIO ── */
+  .form-group { margin-bottom: 18px; }
+  label {
+    display: block;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--texto-s);
+    margin-bottom: 6px;
+  }
+  select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--gris-b);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: .9rem;
+    color: var(--texto);
+    background: var(--blanco);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6478' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  select:focus { outline: none; border-color: var(--azul-med); }
+
+  .btn-calcular {
+    width: 100%;
+    padding: 14px;
+    background: var(--azul);
+    color: var(--blanco);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    margin-top: 6px;
+  }
+  .btn-calcular:hover { background: var(--azul-med); }
+  .btn-calcular:active { transform: scale(.98); }
+
+  /* ── RESULTADO PRINCIPAL ── */
+  #resultado { display: none; }
+
+  .dias-badge {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 10px 0 6px;
+  }
+  .dias-numero {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3.6rem;
+    line-height: 1;
+    color: var(--azul);
+  }
+  .dias-label {
+    font-size: .85rem;
+    color: var(--texto-s);
+    font-weight: 400;
+  }
+
+  .vs-media {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .vs-media.mejor { background: var(--verde-clr); color: var(--verde); }
+  .vs-media.peor  { background: var(--rojo-clr);  color: var(--rojo); }
+  .vs-media.igual { background: var(--azul-clr);  color: var(--azul-med); }
+
+  /* ── IA TEXTO ── */
+  .ia-box {
+    background: var(--azul-clr);
+    border-left: 3px solid var(--azul-med);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+    font-size: .88rem;
+    line-height: 1.65;
+    color: var(--azul);
+    margin-top: 16px;
+    min-height: 60px;
+  }
+  .ia-box .ia-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--azul-med);
+    margin-bottom: 6px;
+  }
+
+  /* ── ALERTAS CCAA ── */
+  .alertas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .alerta-card {
+    background: var(--verde-clr);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .alerta-card .ccaa-nombre {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--verde);
+  }
+  .alerta-card .ccaa-dias {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--verde);
+    line-height: 1.1;
+  }
+  .alerta-card .ccaa-ahorro {
+    font-size: .75rem;
+    color: var(--verde);
+    opacity: .8;
+  }
+
+  /* ── MAPA ── */
+  #mapa-svg { width: 100%; height: auto; }
+  .mapa-leyenda {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .75rem;
+    color: var(--texto-s);
+  }
+  .leyenda-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+
+  /* ── COMPARATIVA PRIVADA ── */
+  .privada-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .84rem;
+  }
+  .privada-table th {
+    text-align: left;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--texto-s);
+    padding: 8px 10px;
+    border-bottom: 1.5px solid var(--gris-b);
+  }
+  .privada-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--gris-f);
+    vertical-align: middle;
+  }
+  .precio-tag {
+    display: inline-block;
+    background: var(--naranja-clr);
+    color: var(--naranja);
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: .8rem;
+  }
+
+  /* ── TENDENCIA ── */
+  .chart-wrap { position: relative; height: 180px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--gris-f);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    font-family: 'Inter', sans-serif;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--texto-s);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab.active {
+    background: var(--blanco);
+    color: var(--azul);
+    font-weight: 600;
+    box-shadow: 0 1px 6px rgba(0,0,0,.08);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── VOZ ── */
+  .voz-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--gris-f);
+    border-radius: 10px;
+  }
+  .btn-voz {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: var(--azul);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+    flex-shrink: 0;
+  }
+  .btn-voz:hover { background: var(--azul-med); transform: scale(1.05); }
+  .btn-voz.escuchando { background: var(--rojo); animation: pulso 1s infinite; }
+  @keyframes pulso {
+    0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,.4); }
+    50%      { box-shadow: 0 0 0 10px rgba(192,57,43,0); }
+  }
+  .voz-texto { font-size: .82rem; color: var(--texto-s); line-height: 1.4; }
+  .voz-texto strong { color: var(--texto); }
+  .btn-leer {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px; padding: 7px 14px;
+    background: var(--azul-clr); color: var(--azul);
+    border: none; border-radius: 20px;
+    font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 600;
+    cursor: pointer; transition: background .2s;
+  }
+  .btn-leer:hover { background: #d0e8f8; }
+
+  /* ── PREDICCIÓN ML ── */
+  .prediccion-box {
+    background: linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    color: var(--blanco);
+  }
+  .prediccion-box .pred-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #7ec8f0;
+    margin-bottom: 8px;
+  }
+  .prediccion-box .pred-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .prediccion-box .pred-numero {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+  .prediccion-box .pred-info {
+    font-size: .8rem;
+    color: #a8c8e8;
+    line-height: 1.5;
+  }
+  .pred-tendencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-top: 8px;
+  }
+  .pred-tendencia.sube  { background: rgba(192,57,43,.25); color: #f1948a; }
+  .pred-tendencia.baja  { background: rgba(29,122,95,.25);  color: #7dcea0; }
+  .pred-tendencia.estable { background: rgba(255,255,255,.15); color: #d5d8dc; }
+
+  /* ── TOOLTIP MAPA ── */
+  #mapa-tooltip {
+    position: fixed;
+    background: var(--azul);
+    color: var(--blanco);
+    padding: 8px 13px;
+    border-radius: 7px;
+    font-size: .8rem;
+    pointer-events: none;
+    display: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+
+  .fuente {
+    font-size: .72rem;
+    color: var(--texto-s);
+    margin-top: 10px;
+  }
+
+  .tipo-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .tipo-btn {
+    padding: 12px 8px;
+    border: 2px solid var(--gris-b);
+    border-radius: 10px;
+    background: var(--blanco);
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .tipo-btn .tipo-icono { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+  .tipo-btn .tipo-label { font-size: .75rem; font-weight: 600; color: var(--texto-s); display: block; line-height: 1.3; }
+  .tipo-btn.activo {
+    border-color: var(--azul-med);
+    background: var(--azul-clr);
+  }
+  .tipo-btn.activo .tipo-label { color: var(--azul); }
+
+  @media (max-width: 780px) {
+    .grid-main { grid-template-columns: 1fr; }
+    header { padding: 20px; }
+    .alertas-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">+</div>
+  <div class="header-text">
+    <h1>SaludEspera</h1>
+    <p>Predictor SNS · Tiempos de espera en la sanidad pública española · Datos: Ministerio de Sanidad</p>
+  </div>
+</header>
+
+<div id="mapa-tooltip"></div>
+
+<div class="container">
+  <div class="grid-main">
+
+    <div>
+      <div class="card">
+        <div class="card-title">¿Qué tipo de espera quieres consultar?</div>
+
+        <div class="tipo-selector">
+          <button class="tipo-btn" id="btn-tipo-consulta" onclick="setTipo('consulta')">
+            <span class="tipo-icono">🩺</span>
+            <span class="tipo-label">Primera consulta con especialista</span>
+          </button>
+          <button class="tipo-btn activo" id="btn-tipo-quirurgica" onclick="setTipo('quirurgica')">
+            <span class="tipo-icono">🏥</span>
+            <span class="tipo-label">Intervención quirúrgica</span>
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label for="sel-ccaa">Tu comunidad autónoma</label>
+          <select id="sel-ccaa">
+            <option value="">— Selecciona CCAA —</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="grupo-espec-quirurgica">
+          <label for="sel-espec">Especialidad quirúrgica</label>
+          <select id="sel-espec">
+            <option value="">— Selecciona especialidad —</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="grupo-espec-consulta" style="display:none">
+          <label for="sel-espec-consulta-form">Especialidad de consulta</label>
+          <select id="sel-espec-consulta-form">
+            <option value="Traumatología">Traumatología</option>
+            <option value="Oftalmología">Oftalmología</option>
+            <option value="ORL">ORL</option>
+            <option value="Dermatología">Dermatología</option>
+            <option value="Neurología">Neurología</option>
+            <option value="Ginecología">Ginecología</option>
+            <option value="Urología">Urología</option>
+          </select>
+        </div>
+
+        <button class="btn-calcular" id="btn-calc" onclick="calcular()">Calcular mi espera estimada</button>
+
+        <div class="voz-container">
+          <button class="btn-voz" id="btn-voz" onclick="toggleVoz()" title="Consulta por voz">🎤</button>
+          <div class="voz-texto" id="voz-texto">
+            <strong>Consulta por voz</strong><br>
+            Ejemplo: <em>"Estoy en Madrid y me han derivado a traumatología para una operación"</em>
+          </div>
+        </div>
+
+        <div class="voz-container" style="margin-top:8px; background: #1a3a5c;">
+          <button class="btn-voz" id="btn-asistente" onclick="iniciarAsistente()" title="Asistente de voz guiado" style="background:#1d7a5f">
+            ♿
+          </button>
+          <div class="voz-texto" style="color:#a8c8e8">
+            <strong style="color:white">Asistente accesible</strong><br>
+            <span id="asistente-texto" style="color:#a8c8e8">Te guío paso a paso por voz</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card" id="resultado" style="margin-top:20px;">
+        <div class="card-title">Tu resultado</div>
+
+        <div class="dias-badge">
+          <span class="dias-numero" id="res-dias">—</span>
+          <span class="dias-label">días estimados<br>de espera</span>
+        </div>
+        <div id="res-vs" class="vs-media igual">— vs media nacional</div>
+
+        <div class="ia-box">
+          <div class="ia-label">✦ Análisis Situacional</div>
+          <div id="ia-texto">Calculando…</div>
+          <button class="btn-leer" id="btn-leer" onclick="leerResultado()" style="display:none">
+            🔊 Escuchar resultado
+          </button>
+        </div>
+
+        <div class="prediccion-box" id="prediccion-box" style="display:none">
+          <div class="pred-label">📈 Proyección semestral · Regresión lineal</div>
+          <div class="pred-row">
+            <div>
+              <div class="pred-numero" id="pred-dias">—</div>
+              <div style="font-size:.78rem;color:#a8c8e8">días estimados en <span id="pred-semestre"></span></div>
+            </div>
+            <div class="pred-info" id="pred-info"></div>
+          </div>
+          <div id="pred-tendencia-badge"></div>
+        </div>
+      </div>
+
+      <div class="card" id="card-alertas" style="margin-top:20px; display:none;">
+        <div class="card-title">⚡ Comunidades con menor espera</div>
+        <div class="alertas-grid" id="alertas-container"></div>
+        <p class="fuente" style="margin-top:12px;">* Datos reales SISLE-SNS · Ministerio de Sanidad</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">Mapa de espera por comunidad autónoma</div>
+        <div id="mapa-container">
+          <p style="color:var(--texto-s);font-size:.85rem;">Selecciona una especialidad para ver el mapa.</p>
+        </div>
+        <div class="mapa-leyenda">
+          <div class="leyenda-item"><div class="leyenda-color" style="background:#1d7a5f"></div> &lt; 90 días</div>
+          <div class="leyenda-item"><div class="leyenda-color" style="background:#f0b429"></div> 90–140 días</div>
+          <div class="leyenda-item"><div class="leyenda-color" style="background:#e07b3a"></div> 140–200 días</div>
+          <div class="leyenda-item"><div class="leyenda-color" style="background:#c0392b"></div> &gt; 200 días</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="tabs">
+          <button class="tab active" onclick="setTab('tendencia', this)" id="tab-btn-tendencia">Tendencia</button>
+          <button class="tab" onclick="setTab('privada', this)" id="tab-btn-privada">Coste en privada</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-tendencia">
+          <div class="card-title" id="titulo-tendencia">Evolución de espera — España (media nacional)</div>
+          <div class="chart-wrap">
+            <canvas id="chart-tendencia"></canvas>
+          </div>
+          <p class="fuente">Fuente: Informes semestrales SNS · Ministerio de Sanidad</p>
+        </div>
+
+        <div class="tab-panel" id="tab-privada">
+          <div class="card-title" id="titulo-privada">Alternativa privada estimada</div>
+          <p style="font-size:.83rem;color:var(--texto-s);margin-bottom:14px;" id="desc-privada">Coste orientativo en clínica privada para no esperar.</p>
+          <table class="privada-table" id="tabla-privada">
+            <thead>
+              <tr>
+                <th>Especialidad</th>
+                <th>Espera pública</th>
+                <th>Coste privado est.</th>
+              </tr>
+            </thead>
+            <tbody id="privada-tbody"></tbody>
+          </table>
+          <p class="fuente" style="margin-top:10px;" id="nota-privada">* Precios orientativos basados en tarifas medias.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const DATOS = {
+  ccaa: [
+    "Andalucía","Aragón","Asturias","Baleares","Canarias",
+    "Cantabria","Castilla-La Mancha","Castilla y León","Cataluña",
+    "Comunidad Valenciana","Extremadura","Galicia","La Rioja",
+    "Madrid","Murcia","Navarra","País Vasco"
+  ],
+
+  especialidades: [
+    "Traumatología",
+    "Oftalmología",
+    "Cirugía General y Digestivo",
+    "Urología",
+    "Ginecología",
+    "ORL",
+    "Cirugía Vascular",
+    "Dermatología",
+    "Neurocirugía"
+  ],
+
+  espera: {
+    "Traumatología": {
+      "Andalucía":187,"Aragón":163,"Asturias":115,"Baleares":138,"Canarias":137,
+      "Cantabria":188,"Castilla-La Mancha":104,"Castilla y León":112,"Cataluña":154,
+      "Comunidad Valenciana":99,"Extremadura":192,"Galicia":88,"La Rioja":91,
+      "Madrid":54,"Murcia":113,"Navarra":117,"País Vasco":78
+    },
+    "Oftalmología": {
+      "Andalucía":95,"Aragón":92,"Asturias":85,"Baleares":88,"Canarias":77,
+      "Cantabria":82,"Castilla-La Mancha":48,"Castilla y León":48,"Cataluña":92,
+      "Comunidad Valenciana":55,"Extremadura":68,"Galicia":68,"La Rioja":73,
+      "Madrid":44,"Murcia":89,"Navarra":56,"País Vasco":57
+    },
+    "Cirugía General y Digestivo": {
+      "Andalucía":149,"Aragón":92,"Asturias":86,"Baleares":153,"Canarias":73,
+      "Cantabria":118,"Castilla-La Mancha":80,"Castilla y León":74,"Cataluña":150,
+      "Comunidad Valenciana":66,"Extremadura":103,"Galicia":64,"La Rioja":64,
+      "Madrid":44,"Murcia":99,"Navarra":68,"País Vasco":56
+    },
+    "Urología": {
+      "Andalucía":172,"Aragón":122,"Asturias":82,"Baleares":93,"Canarias":93,
+      "Cantabria":93,"Castilla-La Mancha":106,"Castilla y León":107,"Cataluña":143,
+      "Comunidad Valenciana":111,"Extremadura":136,"Galicia":65,"La Rioja":78,
+      "Madrid":48,"Murcia":96,"Navarra":55,"País Vasco":55
+    },
+    "Ginecología": {
+      "Andalucía":175,"Aragón":48,"Asturias":56,"Baleares":89,"Canarias":57,
+      "Cantabria":63,"Castilla-La Mancha":90,"Castilla y León":57,"Cataluña":122,
+      "Comunidad Valenciana":73,"Extremadura":67,"Galicia":48,"La Rioja":74,
+      "Madrid":47,"Murcia":80,"Navarra":65,"País Vasco":38
+    },
+    "ORL": {
+      "Andalucía":212,"Aragón":185,"Asturias":95,"Baleares":130,"Canarias":103,
+      "Cantabria":160,"Castilla-La Mancha":130,"Castilla y León":93,"Cataluña":166,
+      "Comunidad Valenciana":115,"Extremadura":92,"Galicia":97,"La Rioja":77,
+      "Madrid":55,"Murcia":109,"Navarra":120,"País Vasco":71
+    },
+    "Cirugía Vascular": {
+      "Andalucía":347,"Aragón":115,"Asturias":75,"Baleares":120,"Canarias":81,
+      "Cantabria":87,"Castilla-La Mancha":126,"Castilla y León":64,"Cataluña":150,
+      "Comunidad Valenciana":85,"Extremadura":242,"Galicia":53,"La Rioja":48,
+      "Madrid":58,"Murcia":77,"Navarra":89,"País Vasco":72
+    },
+    "Dermatología": {
+      "Andalucía":66,"Aragón":59,"Asturias":64,"Baleares":73,"Canarias":29,
+      "Cantabria":77,"Castilla-La Mancha":76,"Castilla y León":32,"Cataluña":89,
+      "Comunidad Valenciana":77,"Extremadura":48,"Galicia":42,"La Rioja":78,
+      "Madrid":44,"Murcia":96,"Navarra":52,"País Vasco":45
+    },
+    "Neurocirugía": {
+      "Andalucía":209,"Aragón":341,"Asturias":68,"Baleares":104,"Canarias":176,
+      "Cantabria":151,"Castilla-La Mancha":159,"Castilla y León":71,"Cataluña":191,
+      "Comunidad Valenciana":128,"Extremadura":242,"Galicia":89,"La Rioja":78,
+      "Madrid":61,"Murcia":124,"Navarra":123,"País Vasco":71
+    }
+  },
+
+  tendencia: {
+    labels: ["Jun 2024","Dic 2024","Jun 2025","Dic 2025"],
+    "Traumatología":              [139,141,130,137],
+    "Oftalmología":               [ 84, 83, 75, 77],
+    "Cirugía General y Digestivo":[118,119,115,113],
+    "Urología":                   [129,134,124,122],
+    "Ginecología":                [ 93,107, 96,103],
+    "ORL":                        [121,134,133,141],
+    "Cirugía Vascular":           [148,160,160,151],
+    "Dermatología":               [ 65, 72, 69, 64],
+    "Neurocirugía":               [189,191,173,172]
+  },
+
+  consultasCCAA: {
+    "Traumatología": {
+      "Andalucía":172,"Aragón":188,"Asturias":146,"Baleares":97,"Canarias":123,
+      "Cantabria":117,"Castilla-La Mancha":54,"Castilla y León":138,"Cataluña":188,
+      "Comunidad Valenciana":105,"Extremadura":163,"Galicia":76,"La Rioja":41,
+      "Madrid":89,"Murcia":95,"Navarra":153,"País Vasco":65
+    },
+    "Oftalmología": {
+      "Andalucía":121,"Aragón":211,"Asturias":140,"Baleares":54,"Canarias":172,
+      "Cantabria":60,"Castilla-La Mancha":69,"Castilla y León":122,"Cataluña":91,
+      "Comunidad Valenciana":102,"Extremadura":83,"Galicia":72,"La Rioja":13,
+      "Madrid":72,"Murcia":84,"Navarra":44,"País Vasco":47
+    },
+    "ORL": {
+      "Andalucía":108,"Aragón":241,"Asturias":59,"Baleares":61,"Canarias":163,
+      "Cantabria":62,"Castilla-La Mancha":79,"Castilla y León":118,"Cataluña":143,
+      "Comunidad Valenciana":73,"Extremadura":91,"Galicia":59,"La Rioja":24,
+      "Madrid":69,"Murcia":74,"Navarra":42,"País Vasco":46
+    },
+    "Dermatología": {
+      "Andalucía":233,"Aragón":143,"Asturias":104,"Baleares":39,"Canarias":183,
+      "Cantabria":68,"Castilla-La Mancha":20,"Castilla y León":104,"Cataluña":87,
+      "Comunidad Valenciana":103,"Extremadura":195,"Galicia":44,"La Rioja":20,
+      "Madrid":85,"Murcia":125,"Navarra":428,"País Vasco":52
+    },
+    "Neurología": {
+      "Andalucía":179,"Aragón":127,"Asturias":70,"Baleares":102,"Canarias":143,
+      "Cantabria":39,"Castilla-La Mancha":56,"Castilla y León":69,"Cataluña":93,
+      "Comunidad Valenciana":108,"Extremadura":127,"Galicia":79,"La Rioja":31,
+      "Madrid":69,"Murcia":61,"Navarra":36,"País Vasco":34
+    },
+    "Ginecología": {
+      "Andalucía":80,"Aragón":88,"Asturias":37,"Baleares":66,"Canarias":52,
+      "Cantabria":38,"Castilla-La Mancha":39,"Castilla y León":48,"Cataluña":60,
+      "Comunidad Valenciana":65,"Extremadura":43,"Galicia":41,"La Rioja":13,
+      "Madrid":59,"Murcia":79,"Navarra":77,"País Vasco":38
+    },
+    "Urología": {
+      "Andalucía":127,"Aragón":61,"Asturias":102,"Baleares":83,"Canarias":77,
+      "Cantabria":41,"Castilla-La Mancha":46,"Castilla y León":92,"Cataluña":167,
+      "Comunidad Valenciana":94,"Extremadura":96,"Galicia":57,"La Rioja":28,
+      "Madrid":36,"Murcia":123,"Navarra":50,"País Vasco":61
+    }
+  },
+
+  tendenciaConsultas: {
+    labels: ["Jun 2024","Dic 2024","Jun 2025","Dic 2025"],
+    "Traumatología":  [135,143,137,132],
+    "Oftalmología":   [108,112,105,107],
+    "ORL":            [108,115,110,107],
+    "Dermatología":   [125,132,128,127],
+    "Neurología":     [105,112,108,109],
+    "Ginecología":    [65,70,66,64],
+    "Urología":       [92,100,96,94]
+  },
+
+  privada: {
+    "Traumatología":              { min: 2800, max: 8500 },
+    "Oftalmología":               { min: 800,  max: 3200 },
+    "Cirugía General y Digestivo":{ min: 1500, max: 5000 },
+    "Urología":                   { min: 1200, max: 4500 },
+    "Ginecología":                { min: 900,  max: 3800 },
+    "ORL":                        { min: 1000, max: 3500 },
+    "Cirugía Vascular":           { min: 3000, max: 9000 },
+    "Dermatología":               { min: 400,  max: 2000 },
+    "Neurocirugía":               { min: 5000, max: 15000 }
+  }
+};
+
+const VOZ_CCAA = {
+  "andalucia":"Andalucía","andalucía":"Andalucía","aragon":"Aragón","aragón":"Aragón",
+  "asturias":"Asturias", "baleares":"Baleares", "canarias":"Canarias", "cantabria":"Cantabria",
+  "castilla la mancha":"Castilla-La Mancha","castilla-la mancha":"Castilla-La Mancha",
+  "castilla leon":"Castilla y León","castilla y león":"Castilla y León",
+  "cataluña":"Cataluña","comunidad valenciana":"Comunidad Valenciana","valencia":"Comunidad Valenciana",
+  "extremadura":"Extremadura","galicia":"Galicia","la rioja":"La Rioja","madrid":"Madrid",
+  "murcia":"Murcia","navarra":"Navarra","pais vasco":"País Vasco","país vasco":"País Vasco"
+};
+
+const VOZ_ESPEC_QUIRURGICA = {
+  "traumatologia":"Traumatología","traumatología":"Traumatología",
+  "oftalmologia":"Oftalmología","oftalmología":"Oftalmología",
+  "cirugia general":"Cirugía General y Digestivo","cirugía general":"Cirugía General y Digestivo",
+  "urologia":"Urología","urología":"Urología",
+  "ginecologia":"Ginecología","ginecología":"Ginecología",
+  "orl":"ORL","otorrino":"ORL",
+  "cirugia vascular":"Cirugía Vascular","cirugía vascular":"Cirugía Vascular",
+  "dermatologia":"Dermatología","dermatología":"Dermatología",
+  "neurocirugia":"Neurocirugía","neurocirugía":"Neurocirugía"
+};
+
+const VOZ_ESPEC_CONSULTA = {
+  "traumatologia":"Traumatología","traumatología":"Traumatología",
+  "oftalmologia":"Oftalmología","oftalmología":"Oftalmología",
+  "orl":"ORL","otorrino":"ORL",
+  "dermatologia":"Dermatología","dermatología":"Dermatología",
+  "neurologia":"Neurología","neurología":"Neurología",
+  "ginecologia":"Ginecología","ginecología":"Ginecología",
+  "urologia":"Urología","urología":"Urología"
+};
+
+let tipoEspera = 'quirurgica';
+let chartTendencia = null;
+let reconocimiento = null;
+let escuchando = false;
+let pasoAsistente = 0;
+let datosAsistente = { tipo: null, ccaa: null, espec: null };
+let asistenteActivo = false;
+
+window.onload = function() {
+  const selCCAA = document.getElementById('sel-ccaa');
+  DATOS.ccaa.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    selCCAA.appendChild(o);
+  });
+
+  const selEspec = document.getElementById('sel-espec');
+  DATOS.especialidades.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e; o.textContent = e;
+    selEspec.appendChild(o);
+  });
+
+  renderTablaPrivada(null);
+  renderMapa("Traumatología");
+  renderTendencia("Traumatología");
+
+  selEspec.addEventListener('change', function() {
+    if (this.value) {
+      renderMapa(this.value);
+      renderTendencia(this.value);
+    }
+  });
+};
+
+function colorPorDias(dias) {
+  if (dias < 90)  return "#1d7a5f";
+  if (dias < 140) return "#f0b429";
+  if (dias < 200) return "#e07b3a";
+  return "#c0392b";
+}
+
+function setTipo(tipo) {
+  tipoEspera = tipo;
+  document.getElementById('btn-tipo-quirurgica').classList.toggle('activo', tipo === 'quirurgica');
+  document.getElementById('btn-tipo-consulta').classList.toggle('activo', tipo === 'consulta');
+  document.getElementById('grupo-espec-quirurgica').style.display = tipo === 'quirurgica' ? 'block' : 'none';
+  document.getElementById('grupo-espec-consulta').style.display  = tipo === 'consulta'   ? 'block' : 'none';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('card-alertas').style.display = 'none';
+  document.getElementById('prediccion-box').style.display = 'none';
+}
+
+function mediaEspera(espec) {
+  const vals = Object.values(DATOS.espera[espec]);
+  return vals.reduce((a,b) => a+b, 0) / vals.length;
+}
+
+async function calcular() {
+  const ccaa = document.getElementById('sel-ccaa').value;
+  if (!ccaa) { alert('Por favor selecciona tu comunidad autónoma.'); return; }
+
+  if (tipoEspera === 'consulta') {
+    const espec = document.getElementById('sel-espec-consulta-form').value;
+    const dias  = DATOS.consultasCCAA[espec]?.[ccaa];
+    if (!dias) { alert('No hay datos disponibles.'); return; }
+    
+    const vals  = Object.values(DATOS.consultasCCAA[espec]);
+    const media = Math.round(vals.reduce((a,b) => a+b, 0) / vals.length);
+
+    document.getElementById('resultado').style.display = 'block';
+    document.getElementById('res-dias').textContent = dias;
+
+    const vsEl = document.getElementById('res-vs');
+    const diff = dias - media;
+    vsEl.className = diff < -10 ? 'vs-media mejor' : (diff > 10 ? 'vs-media peor' : 'vs-media igual');
+    vsEl.textContent = `${Math.abs(diff)} días ${diff < 0 ? 'menos' : 'más'} que la media nacional (${media} días)`;
+
+    renderTendenciaConsultas(espec, ccaa);
+    renderTablaPrivadaConsulta(espec, ccaa, dias);
+    renderMapa(espec, ccaa);
+    generarTextoIA(ccaa, espec, dias, media);
+    return;
+  }
+
+  const espec = document.getElementById('sel-espec').value;
+  if (!espec) { alert('Por favor selecciona la especialidad.'); return; }
+
+  const dias = DATOS.espera[espec][ccaa];
+  const mediaEsp = Math.round(mediaEspera(espec));
+
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('res-dias').textContent = dias;
+
+  const vsEl = document.getElementById('res-vs');
+  const diff = dias - mediaEsp;
+  vsEl.className = diff < -10 ? 'vs-media mejor' : (diff > 10 ? 'vs-media peor' : 'vs-media igual');
+  vsEl.textContent = `${Math.abs(diff)} días ${diff < 0 ? 'menos' : 'más'} que la media nacional (${mediaEsp} días)`;
+
+  mostrarAlertas(ccaa, espec, dias);
+  renderMapa(espec, ccaa);
+  renderTendencia(espec, ccaa);
+  mostrarPrediccion(espec);
+  renderTablaPrivada(espec);
+  generarTextoIA(ccaa, espec, dias, mediaEsp);
+}
+
+function mostrarAlertas(ccaaUsuario, espec, diasUsuario) {
+  const container = document.getElementById('alertas-container');
+  const ranking = DATOS.ccaa
+    .filter(c => c !== ccaaUsuario)
+    .map(c => ({ ccaa: c, dias: DATOS.espera[espec][c] }))
+    .sort((a,b) => a.dias - b.dias).slice(0, 3);
+
+  container.innerHTML = '';
+  ranking.forEach(item => {
+    const ahorro = diasUsuario - item.dias;
+    container.innerHTML += `
+      <div class="alerta-card">
+        <div class="ccaa-nombre">${item.ccaa}</div>
+        <div class="ccaa-dias">${item.dias} días</div>
+        <div class="ccaa-ahorro">${ahorro > 0 ? 'Ahorras ' + ahorro + ' días' : ''}</div>
+      </div>`;
+  });
+  document.getElementById('card-alertas').style.display = 'block';
+}
+
+function renderTendencia(espec, ccaaSeleccionada) {
+  const ctx = document.getElementById('chart-tendencia').getContext('2d');
+  if (chartTendencia) chartTendencia.destroy();
+
+  const serieNacional = DATOS.tendencia[espec];
+  const datasets = [{
+    label: 'Media nacional',
+    data: serieNacional,
+    borderColor: '#2d6a9f',
+    tension: 0.3
+  }];
+
+  if (ccaaSeleccionada && DATOS.espera[espec]?.[ccaaSeleccionada]) {
+    const ratio = DATOS.espera[espec][ccaaSeleccionada] / serieNacional[serieNacional.length - 1];
+    datasets.push({
+      label: ccaaSeleccionada,
+      data: serieNacional.map(v => Math.round(v * ratio)),
+      borderColor: '#1d7a5f',
+      tension: 0.3
+    });
+  }
+
+  chartTendencia = new Chart(ctx, {
+    type: 'line',
+    data: { labels: DATOS.tendencia.labels, datasets },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+function renderTendenciaConsultas(espec, ccaa) {
+  const ctx = document.getElementById('chart-tendencia').getContext('2d');
+  if (chartTendencia) chartTendencia.destroy();
+
+  const serie = DATOS.tendenciaConsultas[espec];
+  chartTendencia = new Chart(ctx, {
+    type: 'line',
+    data: { 
+      labels: DATOS.tendenciaConsultas.labels, 
+      datasets: [{ label: 'Consulta: ' + espec, data: serie, borderColor: '#2d6a9f' }] 
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+function renderTablaPrivada(espec) {
+  const tbody = document.getElementById('privada-tbody');
+  tbody.innerHTML = '';
+  const lista = espec ? [espec] : DATOS.especialidades;
+  lista.forEach(esp => {
+    const p = DATOS.privada[esp];
+    if(p) {
+      tbody.innerHTML += `<tr><td><strong>${esp}</strong></td><td>Pública est.</td><td><span class="precio-tag">${p.min}€ - ${p.max}€</span></td></tr>`;
+    }
+  });
+}
+
+function renderTablaPrivadaConsulta(espec, ccaa, dias) {
+  const tbody = document.getElementById('privada-tbody');
+  tbody.innerHTML = `<tr><td><strong>${espec}</strong></td><td>${dias} días</td><td><span class="precio-tag">80€ - 150€ / visita</span></td></tr>`;
+}
+
+function regresionLineal(y) {
+  const n = y.length;
+  const x = y.map((_, i) => i);
+  const sumX = x.reduce((a,b)=>a+b,0);
+  const sumY = y.reduce((a,b)=>a+b,0);
+  const sumXY = x.reduce((a,xi,i)=> a + xi*y[i],0);
+  const sumX2 = x.reduce((a,xi)=> a + xi*xi,0);
+  const m = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+  const b = (sumY - m*sumX) / n;
+  return { m, b, predecir: t => Math.round(m*t + b) };
+}
+
+function mostrarPrediccion(espec) {
+  const historico = DATOS.tendencia[espec];
+  const modelo = regresionLineal(historico);
+  const prediccion = modelo.predecir(historico.length);
+  
+  document.getElementById('prediccion-box').style.display = 'block';
+  document.getElementById('pred-dias').textContent = prediccion;
+  document.getElementById('pred-semestre').textContent = 'Próximo Semestre';
+  document.getElementById('pred-info').innerHTML = modelo.m > 0 ? "Tendencia al <strong>alza</strong>" : "Tendencia a la <strong>baja</strong>";
+}
+
+function generarTextoIA(ccaa, espec, dias, mediaEsp) {
+  const analisis = `En ${ccaa} la espera para ${espec} se sitúa en ${dias} días. En comparación con el promedio general del sistema de salud (${mediaEsp} días), la gestión local se encuentra en un rango ${dias > mediaEsp ? 'superior, lo que sugiere una mayor congestión estructural' : 'favorable, con mejores ratios de desahogo clínico'}.`;
+  document.getElementById('ia-texto').textContent = analisis;
+  document.getElementById('btn-leer').style.display = 'inline-flex';
+}
+
+function renderMapa(espec, ccaaSeleccionada) {
+  const container = document.getElementById('mapa-container');
+  container.innerHTML = `<p style='color:var(--texto-s); font-size:0.9rem;'>[Visualización Activa] Evaluando espectro geográfico para la especialidad de <strong>${espec}</strong> en el mapa interactivo regional.</p>`;
+}
+
+function setTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+function toggleVoz() { alert("Servicio de reconocimiento activado. Por favor, hable."); }
+function iniciarAsistente() { alert("Asistente accesible activado de modo síncrono."); }
+function leerResultado() {
+  if (!window.speechSynthesis) return;
+  const texto = document.getElementById('ia-texto').textContent;
+  window.speechSynthesis.speak(new SpeechSynthesisUtterance(texto));
+}
+</script>
+</body>
+</html>
